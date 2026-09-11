@@ -13,6 +13,8 @@ from ._io import (
     read_tracer,
     to_dandelion,
     write_airr,
+    # read_airr_cells,
+    read_spatial_data
 )
 from ._legacy import upgrade_schema
 

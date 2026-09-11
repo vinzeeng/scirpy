@@ -354,6 +354,49 @@ def read_tracer(path: str | Path, **kwargs) -> AnnData:
 
     return from_airr_cells(airr_cells.values(), **kwargs)
 
+# def read_airr_cells(
+#     path: str,
+#     use_umi_count_col: bool = False) -> AnnData:
+#     df = pd.read_csv(path)
+#
+#     print("reading AIRR cells")
+#     print(df.head())
+#
+#     for column in df:
+#       print(column)
+#
+#     for index, cell in df.iterrows():
+#         cell_id = cell["CB"]
+#         alpha = cell["alpha"]
+#         beta = cell["beta"]
+#         print("cell id: " + cell_id + ", alpha: " + str(alpha) + ", beta: " + str(beta))
+#
+#         #airr_cell = AirrCell(cell_id, alpha, beta)
+#
+#
+#     print("reading AIRR cells -- end")
+
+    #return from_airr_cells()
+
+def read_spatial_data(
+    path: str):
+
+    df = pd.read_csv(path)
+
+    df = df[df["NAME"] != "TYPE"]
+    df = df.set_index("NAME")
+    df["X"] = pd.to_numeric(df["X"])
+    df["Y"] = pd.to_numeric(df["Y"])
+
+    obs = df[["cell_type"]]
+    obsm = {
+        "spatial": df[["X", "Y"]].to_numpy()
+    }
+
+    annData = AnnData(obs=obs, obsm=obsm)
+
+    return annData
+
 
 @_doc_params(
     doc_working_model=doc_working_model,

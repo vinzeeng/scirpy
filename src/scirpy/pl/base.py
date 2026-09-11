@@ -495,3 +495,8 @@ def embedding(
     else:
         # only return axes that actually contain a plot.
         return axs[: len(color)]
+
+def plot (anndata: AnnData):
+
+
+    return

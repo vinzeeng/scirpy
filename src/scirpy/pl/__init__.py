@@ -10,3 +10,4 @@ from ._repertoire_overlap import repertoire_overlap
 from ._spectratype import spectratype
 from ._vdj_usage import vdj_usage
 from .base import embedding
+from .base import plot
