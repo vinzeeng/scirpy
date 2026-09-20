@@ -5,7 +5,7 @@ import scanpy as sc
 import scirpy as ir
 
 def create_airr_df(filename: str) -> pd.DataFrame:
-    raw_df = pd.read_csv("SCP2176/other/slidetags_multiome_tcr.csv")
+    raw_df = pd.read_csv("../SCP2176/other/slidetags_multiome_tcr.csv")
 
     tcr_df = pd.DataFrame(columns=["cell_id", "locus", "junction_aa"])
 
@@ -47,12 +47,12 @@ def get_obs_index_mapping(source_obs_names, target_obs_names):
 def import_melanoma_data() -> AnnData:
     # GEX laden
     adata = sc.read_10x_mtx(
-        "SCP2176/expression/6426588be2c9c436276e802d/"
+        "../SCP2176/expression/6426588be2c9c436276e802d/"
     )
 
     # TCR laden
     tcr_df = create_airr_df(
-        "SCP2176/other/slidetags_multiome_tcr.csv"
+        "../SCP2176/other/slidetags_multiome_tcr.csv"
     )
     adata_tcr = ir.io.read_airr(tcr_df)
     tcr_idx = get_obs_index_mapping(
@@ -63,7 +63,7 @@ def import_melanoma_data() -> AnnData:
 
     # Spatial laden
     adata_spatial = ir.io.read_spatial_data(
-        "SCP2176/cluster/HumanMelanomaMultiome_spatial.csv"
+        "../SCP2176/cluster/HumanMelanomaMultiome_spatial.csv"
     )
     spatial_df = pd.DataFrame(
         adata_spatial.obsm["spatial"],
