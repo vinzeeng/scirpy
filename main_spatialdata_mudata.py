@@ -31,5 +31,11 @@ ir.tl.define_clonotype_clusters(
     dual_ir="primary_only"
 )
 
-ir.pl.plot_spatial(mdata)
+ir.pl.plot_spatial(
+    mdata,
+    color="cc_aa_tcrdist",
+    filter_by="cell_type",
+    filter_value="tumour_1",
+)
+
 plt.show()

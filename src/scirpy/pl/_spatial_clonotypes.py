@@ -5,14 +5,13 @@ from anndata import AnnData
 from mudata import MuData
 from matplotlib.ticker import MultipleLocator
 
-
-def plot_spatial(
+def plot_spatial_all(
     data: AnnData | MuData,
     color: str,
+    filter_by: str | None = None,
+    filter_value: str | None = None,
 ):
-    spatial, obs = _get_spatial_data(
-        data
-    )
+    spatial, obs = _get_spatial_data(data)
 
     df = pd.DataFrame(
         spatial,
@@ -32,6 +31,20 @@ def plot_spatial(
         df.index
     )
 
+    if filter_by is not None and filter_value is not None:
+        filter_values = _get_obs_column(
+            data,
+            filter_by
+        )
+
+        df[filter_by] = filter_values.reindex(
+            df.index
+        )
+
+        df = df[
+            df[filter_by] == filter_value
+        ]
+
     ax = plt.gca()
 
     ax.xaxis.set_major_locator(
@@ -44,6 +57,113 @@ def plot_spatial(
 
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
+
+    ax.set_title(
+        f"Spatial distribution by {color}"
+    )
+
+    ax.grid(True)
+
+    # ---------------------------------
+    # Hintergrund: alle gefilterten Zellen
+    # ---------------------------------
+
+    ax.scatter(
+        df["X"],
+        df["Y"],
+        alpha=0.25,
+        label="all cells"
+    )
+
+    # ---------------------------------
+    # Vordergrund: Zellen mit Farbwert
+    # ---------------------------------
+
+    colored_df = df[
+        df[color].notna()
+    ]
+
+    for value in colored_df[color].unique():
+
+        subset = colored_df[
+            colored_df[color] == value
+        ]
+
+        ax.scatter(
+            subset["X"],
+            subset["Y"],
+            label=value
+        )
+
+    ax.invert_xaxis()
+    ax.invert_yaxis()
+    ax.set_aspect("equal")
+
+    ax.legend()
+
+    plt.show()
+
+def plot_spatial(
+    data: AnnData | MuData,
+    color: str,
+    filter_by: str | None = None,
+    filter_value: str | None = None,
+):
+    spatial, obs = _get_spatial_data(
+        data
+    )
+
+    df = pd.DataFrame(
+        spatial,
+        index=obs.index,
+        columns=["X", "Y"]
+    )
+
+    # Nur Zellen mit gültigen Spatial-Koordinaten
+    mask = df.notna().all(axis=1)
+    df = df[mask].copy()
+
+    # Werte für die Einfärbung holen
+    color_values = _get_obs_column(
+        data,
+        color
+    )
+
+    df[color] = color_values.reindex(
+        df.index
+    )
+
+    # Optionaler Filter, z. B. nach Gewebetyp / Zelltyp
+    if filter_by is not None and filter_value is not None:
+
+        filter_values = _get_obs_column(
+            data,
+            filter_by
+        )
+
+        df[filter_by] = filter_values.reindex(
+            df.index
+        )
+
+        df = df[
+            df[filter_by] == filter_value
+        ]
+
+    ax = plt.gca()
+
+    ax.xaxis.set_major_locator(
+        MultipleLocator(1000)
+    )
+
+    ax.yaxis.set_major_locator(
+        MultipleLocator(1000)
+    )
+
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+
+    ax.invert_yaxis()
+    ax.invert_xaxis()
 
     ax.set_title(
         f"Spatial distribution by {color}"
