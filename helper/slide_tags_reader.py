@@ -8,30 +8,26 @@ from spatialdata import SpatialData
 from spatialdata.models import PointsModel, TableModel
 
 
-def read_slidetags(path: str | Path) -> SpatialData:
+def read_slidetags(
+    path: str | Path,
+) -> SpatialData:
     """
-    Read the SCP2176 Slide-tags dataset into a SpatialData object.
+    Read the SCP2176 Slide-tags dataset into SpatialData.
 
-    Imported data:
-        - spatially mapped nuclei
-        - gene expression
-        - metadata
-        - TCR data
-
-    ATAC data is currently not imported.
-
-    Parameters
-    ----------
-    path
-        Path to the SCP2176 root directory.
-
-    Returns
-    -------
+    Result
+    ------
     SpatialData
-        SpatialData object containing:
-        - points["nuclei"]
-        - tables["gex"]
-        - tables["tcr"]
+    ├── points["spatial"]
+    │   ├── NAME
+    │   ├── X
+    │   ├── Y
+    │   └── cell_type
+    │
+    └── tables["adata"]
+        └── AnnData containing
+            - gene expression
+            - metadata
+            - raw TCR information
     """
 
     path = Path(path)
@@ -62,35 +58,34 @@ def read_slidetags(path: str | Path) -> SpatialData:
     _validate_file(metadata_path)
     _validate_file(tcr_path)
 
-    nuclei = _read_nuclei(
+    spatial = _read_spatial_points(
         spatial_path
     )
 
-    gex = _read_gex(
+    adata = _read_table(
         expression_directory,
         metadata_path,
-    )
-
-    tcr = _read_tcr(
-        tcr_path
+        tcr_path,
     )
 
     return SpatialData(
         points={
-            "nuclei": nuclei,
+            "spatial": spatial,
         },
         tables={
-            "gex": gex,
-            "tcr": tcr,
+            "adata": adata,
         },
     )
 
 
-def _read_nuclei(
+def _read_spatial_points(
     spatial_path: Path,
 ):
     """
-    Read spatial coordinates and cell annotations.
+    Read the spatial coordinates from the original
+    Slide-tags spatial CSV.
+
+    Original column names are preserved.
     """
 
     df = pd.read_csv(
@@ -118,8 +113,8 @@ def _read_nuclei(
             f"{missing_columns}"
         )
 
-    # TYPE is a technical metadata row,
-    # not a biological observation.
+    # The TYPE row contains column metadata and does not
+    # represent a biological observation.
     df = df[
         df["NAME"] != "TYPE"
     ].copy()
@@ -134,35 +129,41 @@ def _read_nuclei(
         errors="raise",
     )
 
-    df = df.rename(
-        columns={
-            "NAME": "cell_id",
-            "X": "x",
-            "Y": "y",
-        }
-    )
-
-    if df["cell_id"].duplicated().any():
+    if df["NAME"].duplicated().any():
         raise ValueError(
-            "Spatial file contains duplicate cell IDs."
+            "Spatial file contains duplicate NAME values."
         )
 
     return PointsModel.parse(
-        df
+        df,
+        coordinates={
+            "x": "X",
+            "y": "Y",
+        },
     )
 
 
-def _read_gex(
+def _read_table(
     expression_directory: Path,
     metadata_path: Path,
+    tcr_path: Path,
 ) -> AnnData:
     """
-    Read 10x gene-expression data and attach metadata.
+    Read gene expression and attach metadata and
+    raw TCR information using the original cell barcodes.
     """
 
-    gex = sc.read_10x_mtx(
+    # --------------------------------------------------
+    # Gene expression
+    # --------------------------------------------------
+
+    adata = sc.read_10x_mtx(
         expression_directory
     )
+
+    # --------------------------------------------------
+    # Metadata
+    # --------------------------------------------------
 
     metadata = pd.read_csv(
         metadata_path
@@ -177,58 +178,47 @@ def _read_gex(
     )
 
     if metadata is not None:
-        gex.obs = gex.obs.join(
+        adata.obs = adata.obs.join(
             metadata,
             how="left",
         )
 
-    return TableModel.parse(
-        gex
-    )
+    # --------------------------------------------------
+    # TCR
+    # --------------------------------------------------
 
-
-def _read_tcr(
-    tcr_path: Path,
-) -> AnnData:
-    """
-    Read Slide-tags TCR data.
-    """
-
-    df = pd.read_csv(
+    tcr = pd.read_csv(
         tcr_path
     )
 
-    df = _drop_unnamed_columns(
-        df
+    tcr = _drop_unnamed_columns(
+        tcr
     )
 
-    if "CB" not in df.columns:
+    if "CB" not in tcr.columns:
         raise ValueError(
-            "TCR file does not contain the expected 'CB' column."
+            "TCR file does not contain "
+            "the expected 'CB' column."
         )
 
-    # Use a consistent name for cell identifiers.
-    df = df.rename(
-        columns={
-            "CB": "cell_id"
-        }
-    )
-
-    if df["cell_id"].duplicated().any():
+    if tcr["CB"].duplicated().any():
         raise ValueError(
-            "TCR file contains duplicate cell IDs."
+            "TCR file contains duplicate CB values."
         )
 
-    df = df.set_index(
-        "cell_id"
+    # CB contains the same cell barcodes used by
+    # the 10x gene-expression AnnData.
+    tcr = tcr.set_index(
+        "CB"
     )
 
-    tcr = AnnData(
-        obs=df
+    adata.obs = adata.obs.join(
+        tcr,
+        how="left",
     )
 
     return TableModel.parse(
-        tcr
+        adata
     )
 
 
@@ -246,19 +236,15 @@ def _prepare_metadata(
         metadata["NAME"] != "TYPE"
     ].copy()
 
-    metadata = metadata.rename(
-        columns={
-            "NAME": "cell_id"
-        }
-    )
-
-    if metadata["cell_id"].duplicated().any():
+    if metadata["NAME"].duplicated().any():
         raise ValueError(
-            "Metadata contains duplicate cell IDs."
+            "Metadata contains duplicate NAME values."
         )
 
+    # NAME contains the same cell barcodes used
+    # by AnnData.obs_names.
     metadata = metadata.set_index(
-        "cell_id"
+        "NAME"
     )
 
     return metadata
@@ -268,7 +254,8 @@ def _find_10x_expression_directory(
     expression_path: Path,
 ) -> Path:
     """
-    Find the directory containing the 10x matrix files.
+    Find the directory containing the standard
+    10x gene-expression matrix files.
     """
 
     if not expression_path.exists():
@@ -333,7 +320,7 @@ def _validate_file(
     path: Path,
 ) -> None:
     """
-    Check whether a required file exists.
+    Check whether a required dataset file exists.
     """
 
     if not path.is_file():
