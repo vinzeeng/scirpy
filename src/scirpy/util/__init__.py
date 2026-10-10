@@ -1,8 +1,9 @@
 import json
 import os
+import sys
 from collections.abc import Callable, Sequence
 from textwrap import dedent
-from typing import Any, Union, cast, overload
+from typing import TYPE_CHECKING, Any, Union, cast, overload
 
 import awkward as ak
 import numpy as np
@@ -14,6 +15,9 @@ from mudata import MuData
 from scanpy import logging
 from scipy.sparse import issparse
 from tqdm.auto import tqdm
+
+if TYPE_CHECKING:
+    from spatialdata import SpatialData
 
 # reexport tqdm (here was previously a workaround for https://github.com/tqdm/tqdm/issues/1082)
 __all__ = ["tqdm"]
@@ -34,7 +38,11 @@ def _doc_params(**kwds):
 
 class DataHandler:
     """\
-    Transparent access to airr modality in both AnnData and MuData objects.
+    Transparent access to AIRR data in AnnData, MuData, and SpatialData objects.
+
+    SpatialData uses its original AnnData table, prepared in place with spatial
+    coordinates and AIRR data. Results remain in that table. The original container
+    is available through `spatialdata`. SpatialData must contain a single table.
 
     Performs a plausibility check of the input data for public scirpy functions.
 
@@ -55,7 +63,7 @@ class DataHandler:
     """
 
     #: Supported Data types
-    TYPE = Union[AnnData, MuData, "DataHandler"]
+    TYPE = Union[AnnData, MuData, "SpatialData", "DataHandler"]
 
     @overload
     @staticmethod
@@ -80,12 +88,24 @@ class DataHandler:
         airr_key: str | None = None,
         chain_idx_key: str | None = None,
     ):
+        self._spatialdata = None
         if isinstance(data, DataHandler):
+            self._spatialdata = data._spatialdata
             self._data = data._data
             self._airr_mod = data._airr_mod
             self._airr_key = data._airr_key
             self._chain_idx_key = data._chain_idx_key
         else:
+            # A SpatialData instance requires its defining module to be loaded.
+            # Avoid importing the optional dependency for ordinary AnnData/MuData.
+            if "spatialdata" in sys.modules:
+                from spatialdata import SpatialData
+
+                if isinstance(data, SpatialData):
+                    from ._spatialdata import prepare_spatialdata_for_scirpy
+
+                    self._spatialdata = data
+                    data = prepare_spatialdata_for_scirpy(data)
             self._data = data
             self._airr_mod = airr_mod
             self._airr_key = airr_key
@@ -215,7 +235,7 @@ class DataHandler:
 
     @property
     def adata(self) -> AnnData:
-        """Reference to the AnnData object of the AIRR modality."""
+        """Reference to the input AnnData table or the AIRR modality of MuData."""
         if isinstance(self._data, AnnData):
             return self._data
         else:
@@ -233,6 +253,13 @@ class DataHandler:
         Otherwise the AnnData object.
         """
         return self._data
+
+    @property
+    def spatialdata(self) -> "SpatialData":
+        """Return the original SpatialData container, if supplied at initialization."""
+        if self._spatialdata is None:
+            raise AttributeError("DataHandler was initialized without SpatialData.")
+        return self._spatialdata
 
     @property
     def mdata(self) -> MuData:
@@ -267,7 +294,8 @@ class DataHandler:
         doc["adata"] = dedent(
             """\
             adata
-                AnnData or MuData object that contains :term:`AIRR` information.
+                AnnData, MuData, or SpatialData object that contains :term:`AIRR` information.
+                SpatialData uses its original AnnData table; results are stored in that table.
             """
         )
         doc["airr_mod"] = dedent(

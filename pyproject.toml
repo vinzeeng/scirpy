@@ -49,6 +49,7 @@ optional-dependencies.parasail = [
   "parasail!=1.2.1",
 ]
 optional-dependencies.rpack = [ "rectangle-packer" ]
+optional-dependencies.spatialdata = [ "spatialdata" ]
 urls.Documentation = "https://scirpy.readthedocs.io/"
 urls.Home-page = "https://github.com/scverse/scirpy"
 urls.Source = "https://github.com/scverse/scirpy"
