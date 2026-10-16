@@ -10,6 +10,34 @@ and this project adheres to [Semantic Versioning][].
 
 ## Unreleased
 
+### Fixes
+
+  - Avoid deprecated AnnData `obsm_keys()` calls when plotting clonotype networks or exporting them to igraph.
+
+## v0.26.0
+
+### Features
+
+  - Add a linear-gap Needleman-Wunsch distance metric for CDR3 amino acid sequences via
+    `metric="needleman_wunsch"`. The `alignment` and `fastalignment` metrics are now
+    deprecated. When `gap_open == gap_extend` (which has always been the default), use `needleman_wunsch` instead.
+
+### Performance improvements
+
+ - Improve the GPU implementation of the Hamming distance metric with row and column tiling, adaptive result buffers,
+   and other performance optimizations. GPU tiles can be configured
+   with `gpu_tile_rows`, `gpu_tile_cols`, and `gpu_tile_buffer_cols`. The previous `gpu_n_blocks` and `gpu_block_width`
+   parameters are deprecated and ignored; calls using them emit a warning and use the new parameters' defaults
+   unless the new parameters are explicitly provided.
+
+## v0.25.1
+
+### Fixes
+
+ - Compatibility with `mudata >= 0.4`, where `update()` no longer pulls `obs` columns from the individual modalities
+   into the global `obs` by default. Modality-prefixed columns (e.g. `airr:clone_id`) now need to be made available
+   explicitly with `mdata.pull_obs()` ([#743](https://github.com/scverse/scirpy/issues/743)).
+
 ### Chore
 
  - Use the deprecation decorators from [scverse-misc](https://scverse-misc.readthedocs.io/) for deprecated functions
