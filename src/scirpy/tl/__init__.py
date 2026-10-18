@@ -10,3 +10,4 @@ from ._ir_query import ir_query, ir_query_annotate, ir_query_annotate_df
 from ._mutational_load import mutational_load
 from ._repertoire_overlap import repertoire_overlap
 from ._spectratype import spectratype
+from ._spatial_clonotype_distance import spatial_clonotype_distance

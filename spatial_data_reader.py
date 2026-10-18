@@ -101,11 +101,6 @@ def read_spatial_data (path: str| Path) -> SpatialData:
 
     tcr_ann_data = _read_tcr(tcr_path)
 
-    print(len(tcr_ann_data.obsm["airr"]))
-    print(tcr_ann_data.obsm)
-    print(tcr_ann_data.obs_names[:5])
-    print(adata.obs_names[:5])
-
     # Position jeder GEX-Zelle im AIRR-AnnData ermitteln
     indices = tcr_ann_data.obs_names.get_indexer(adata.obs_names)
 
@@ -119,15 +114,6 @@ def read_spatial_data (path: str| Path) -> SpatialData:
     # In das GEX-AnnData übernehmen
     adata.obsm["airr"] = extended[indices]
 
-    print(tcr_ann_data.shape)
-
-    # tcr = tcr.drop(columns=["Unnamed: 0"])
-    #
-    # print(tcr[["alpha", "beta"]].head(10).to_string())
-    # print(tcr[["alpha", "beta"]].dtypes)
-    #
-    # adata.obs = adata.obs.join(tcr, how="left")
-
     table = TableModel.parse(
         adata
     )
@@ -140,7 +126,6 @@ def read_spatial_data (path: str| Path) -> SpatialData:
             "adata": table,
         },
     )
-
 
 def read_points (file_path: str
                  ) -> PointsModel:
@@ -168,7 +153,6 @@ def _find_10x_expression_directory (file_path: str
             "barcodes.tsv.gz",
             "features.tsv.gz",
         }
-
 
         files = set()
 

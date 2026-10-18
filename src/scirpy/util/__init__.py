@@ -87,6 +87,10 @@ class DataHandler:
             self._airr_key = data._airr_key
             self._chain_idx_key = data._chain_idx_key
         else:
+            if isinstance(data, SpatialData):
+                self._spatialdata = data
+                data = data.tables["adata"]
+
             self._data = data
             self._airr_mod = airr_mod
             self._airr_key = airr_key

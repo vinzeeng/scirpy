@@ -31,4 +31,5 @@ ir.tl.define_clonotype_clusters(
 
 ir.tl.spatial_clonotype_distance(sdata)
 
-ir.pl.plot_spatial()
+ir.pl.plot_spatial_data(sdata)
+ir.pl.plot_spatial_clonotype_distance(sdata)
