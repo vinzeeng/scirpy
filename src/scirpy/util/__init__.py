@@ -13,6 +13,7 @@ from joblib import Parallel
 from mudata import MuData
 from scanpy import logging
 from scipy.sparse import issparse
+from spatialdata import SpatialData
 from tqdm.auto import tqdm
 
 # reexport tqdm (here was previously a workaround for https://github.com/tqdm/tqdm/issues/1082)
@@ -55,7 +56,7 @@ class DataHandler:
     """
 
     #: Supported Data types
-    TYPE = Union[AnnData, MuData, "DataHandler"]
+    TYPE = Union[AnnData, MuData, SpatialData, "DataHandler"]
 
     @overload
     @staticmethod
@@ -218,6 +219,8 @@ class DataHandler:
         """Reference to the AnnData object of the AIRR modality."""
         if isinstance(self._data, AnnData):
             return self._data
+        if isinstance(self._data, SpatialData):
+            return self._data.tables["adata"]
         else:
             if self._airr_mod is not None:
                 try:

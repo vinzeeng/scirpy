@@ -9,4 +9,5 @@ from ._logoplots import logoplot_cdr3_motif
 from ._repertoire_overlap import repertoire_overlap
 from ._spectratype import spectratype
 from ._vdj_usage import vdj_usage
+from ._spatial_clonotypes import plot_spatial
 from .base import embedding
